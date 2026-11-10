@@ -423,11 +423,13 @@ app-root {
   }
 }
 
-/* touchscreens: compact keypad under the input bar. One grid for digits and letters: three rows,
-   twenty half-key columns, so the erase key always sits in the same spot, bottom right and one
-   and a half keys wide (like a phone keyboard), and the map does not jump.
-   Letters: QWERTY, every key a tenth of the width, the second row half a key in, the third row
-   one and a half keys in. Digits: two rows of five wide keys above the erase key. */
+/* touchscreens: compact keypad under the input bar. One grid for digits and letters: rows of
+   38px, twenty half-key columns, so the erase key always sits in the same spot, bottom right and
+   one and a half keys wide (like a phone keyboard). The keypad sits at the bottom, so that spot
+   stays put on screen while the map takes up whatever height is left.
+   Letters: QWERTY in three rows, every key a tenth of the width, the second row half a key in,
+   the third row one and a half keys in. Digits: two rows of five, the erase key next to them over
+   both rows, so the digit pad is a row lower than the letter pad. */
 .keypad {
   flex: none;
   display: grid;
@@ -459,12 +461,22 @@ app-root {
    on the first key would let auto-placement put the next keys before it) */
 .keypad:not(.digits) .krow:nth-child(2)::before { content: ''; grid-row: 2; grid-column-end: span 1; }
 .keypad:not(.digits) .krow:nth-child(3)::before { content: ''; grid-row: 3; grid-column-end: span 3; }
+.keypad.digits {
+  /* last column as wide as three half-key columns plus their two gaps in the letter grid */
+  grid-template-columns: repeat(5, minmax(0, 1fr)) calc((100% - 19 * 4px) * 3 / 20 + 2 * 4px);
+  grid-template-rows: repeat(2, 1fr);
+  height: 81px;
+}
 .keypad.digits button {
-  grid-column-end: span 4;
+  grid-column-end: span 1;
 }
 .keypad .krow > .del {
   grid-row: 3;
   grid-column: 18 / 21;
+}
+.keypad.digits .krow > .del {
+  grid-row: 1 / -1;
+  grid-column: 6;
 }
 .keypad button:active:not(:disabled),
 .bar .del:active {

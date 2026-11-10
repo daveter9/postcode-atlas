@@ -73,13 +73,17 @@ try {
       const delBox = async () => JSON.stringify(await (await page.$('.keypad .del')).boundingBox());
       check(profile, 'eerst alleen cijfers', (await rows()) === '12345|67890⌫', await rows());
       const delDigits = await delBox();
+      const kpDigits = await (await page.$('.keypad')).boundingBox();
+      check(profile, 'cijferblok is twee rijen hoog', kpDigits.height <= 85, String(kpDigits.height));
       check(profile, '0 is uitgegrijsd als eerste cijfer', (await keyState('0')) === true);
       for (const k of ['3', '5', '1', '2']) await tap(k);
       await page.waitForFunction(() => [...document.querySelectorAll('.keypad button')].some((b) => b.textContent.trim() === 'A' && !b.disabled), { timeout: 15000 }).catch(() => {});
       check(profile, 'na vier cijfers alleen QWERTY-letters', (await rows()) === 'QWERTYUIOP|ASDFGHJKL|ZXCVBNM⌫', await rows());
       const inOrder = await page.$$eval('.krow', (rs) => rs.every((r) => [...r.querySelectorAll('button')].every((b, i, a) => !i || a[i - 1].getBoundingClientRect().right < b.getBoundingClientRect().left)));
       check(profile, 'lettertoetsen op het scherm in QWERTY-volgorde', inOrder);
-      check(profile, 'wistoets blijft op dezelfde plek', (await delBox()) === delDigits, `${delDigits} -> ${await delBox()}`);
+      const d0 = JSON.parse(delDigits), d1 = JSON.parse(await delBox());
+      const near = (a, b) => Math.abs(a - b) < 1;
+      check(profile, 'wistoets blijft op dezelfde plek', near(d0.x, d1.x) && near(d0.width, d1.width) && near(d0.y + d0.height, d1.y + d1.height), `${delDigits} -> ${await delBox()}`);
       const kpBox = await (await page.$('.keypad')).boundingBox();
       const del = JSON.parse(await delBox());
       check(profile, 'wistoets rechtsonder', Math.abs(del.x + del.width - (kpBox.x + kpBox.width)) < 2 && Math.abs(del.y + del.height - (kpBox.y + kpBox.height)) < 2, JSON.stringify({ del, kpBox }));
@@ -88,6 +92,7 @@ try {
       check(profile, 'tikken op het toetsenblok', (await value()) === '3512 AB', await value());
       await wait(200);
       check(profile, 'complete postcode: toetsenblok ingeklapt', !(await page.$('.keypad')) && !!(await page.$('.bar .del')));
+      check(profile, 'complete postcode: wistoets rechts in de balk', await page.$eval('.bar', (bar) => bar.querySelector('button:last-of-type')?.classList.contains('del')));
       await tap('⌫', '.bar .del');
       await wait(200);
       check(profile, 'wissen: een terug en toetsenblok weer zichtbaar', (await value()) === '3512 A' && !!(await page.$('.keypad')) && !(await page.$('.bar .del')), await value());
