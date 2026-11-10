@@ -63,9 +63,13 @@ try {
       check(profile, 'systeemtoetsenbord uit', (await page.$eval('#pc', (e) => e.inputMode)) === 'none');
       await page.keyboard.press('Escape');
       await wait(500);
-      const tap = (k, sel = '.keypad button') => page.$$eval(sel, (bs, k) => bs.find((b) => b.textContent.trim() === k)?.click(), k);
-      const keyState = (k) => page.$$eval('.keypad button', (bs, k) => bs.find((b) => b.textContent.trim() === k)?.disabled, k);
-      const rows = () => page.$$eval('.krow', (rs) => rs.map((r) => r.textContent.replace(/\s/g, '')).join('|'));
+      // key label: its text, or ⌫ for the erase key (an SVG icon with aria-label "Wissen")
+      await page.evaluate(() => {
+        window.keyLabel = (b) => b.textContent.trim() || (b.ariaLabel === 'Wissen' ? '⌫' : '');
+      });
+      const tap = (k, sel = '.keypad button') => page.$$eval(sel, (bs, k) => bs.find((b) => keyLabel(b) === k)?.click(), k);
+      const keyState = (k) => page.$$eval('.keypad button', (bs, k) => bs.find((b) => keyLabel(b) === k)?.disabled, k);
+      const rows = () => page.$$eval('.krow', (rs) => rs.map((r) => [...r.querySelectorAll('button')].map(keyLabel).join('')).join('|'));
       check(profile, 'eerst alleen cijfers', (await rows()) === '1234567890⌫', await rows());
       check(profile, '0 is uitgegrijsd als eerste cijfer', (await keyState('0')) === true);
       for (const k of ['3', '5', '1', '2']) await tap(k);

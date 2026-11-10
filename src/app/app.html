@@ -107,7 +107,9 @@
     (input)="onInput($event)"
   />
   @if (touch && complete()) {
-    <button type="button" class="btn del" aria-label="Wissen" (mousedown)="$event.preventDefault()" (click)="press('')">⌫</button>
+    <button type="button" class="btn del" aria-label="Wissen" (mousedown)="$event.preventDefault()" (click)="press('')">
+      <svg class="erase" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 5H20a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 20 19H8.5L2.5 12z" /><path d="M11.5 9.5l5 5m0-5l-5 5" /></svg>
+    </button>
   }
   <button type="button" class="btn" [disabled]="!meta()" (click)="randomPostcode()">Willekeurige postcode</button>
   <p id="hint" class="sr-only">Typ een postcode of klik op de kaart. Backspace zoomt uit, Escape gaat terug naar heel Nederland.</p>
@@ -124,7 +126,9 @@
           <button type="button" [disabled]="!key.ok" (mousedown)="$event.preventDefault()" (click)="press(key.k)">{{ key.k }}</button>
         }
         @if (last) {
-          <button type="button" class="del" aria-label="Wissen" [disabled]="!code()" (mousedown)="$event.preventDefault()" (click)="press('')">⌫</button>
+          <button type="button" class="del" aria-label="Wissen" [disabled]="!code()" (mousedown)="$event.preventDefault()" (click)="press('')">
+            <svg class="erase" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 5H20a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 20 19H8.5L2.5 12z" /><path d="M11.5 9.5l5 5m0-5l-5 5" /></svg>
+          </button>
         }
       </div>
     }
