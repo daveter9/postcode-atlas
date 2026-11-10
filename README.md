@@ -4,6 +4,10 @@ Typ een postcode: elk cijfer en elke letter zoomt verder in, van de negen regio'
 6-positie postcode met buurt, wijk en CBS-cijfers. Klikken op de kaart gaat een niveau dieper,
 Backspace zoomt uit en Esc gaat terug naar heel Nederland. De postcode staat in de URL (`?pc=3512AB`).
 
+<p align="center">
+  <img src="docs/demo.gif" width="320" alt="Op een telefoon wordt 1072 JZ getypt: de kaart zoomt van Nederland naar Amsterdam, De Pijp en de Van Hilligaertstraat met buurt, inwoners en WOZ; daarna springt Willekeurige postcode naar 9151 KS in Holwert.">
+</p>
+
 Angular 22 (zoneless, signals), volledig statisch: er is geen backend.
 
 ## Ontwerp
