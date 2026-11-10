@@ -1,4 +1,4 @@
-import type { AtlasMeta, Pc6Meta } from './atlas-data';
+import type { AdrData, AtlasMeta, Pc6Meta } from './atlas-data';
 
 export interface Theme {
   bg: string;
@@ -23,6 +23,7 @@ export type ToRenderer =
       reduceMotion: boolean;
       code: string;
       pc6Dir: string;
+      adrDir: string;
     }
   | { t: 'data'; buf: ArrayBuffer }
   | { t: 'resize'; w: number; h: number; dpr: number }
@@ -37,6 +38,8 @@ export type FromRenderer =
   | { t: 'ready'; meta: AtlasMeta }
   /** meta = null: this PC4 has no 6-character postcodes with an area */
   | { t: 'pc6'; pc4: string; meta: Pc6Meta | null }
+  /** all addresses (BAG) of a PC4; null = file missing */
+  | { t: 'adr'; pc4: string; data: AdrData | null }
   /** full code under the pointer ('' = nothing) */
   | { t: 'pick'; code: string }
   | { t: 'error'; message: string };

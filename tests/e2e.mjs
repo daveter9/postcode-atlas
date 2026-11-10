@@ -1,0 +1,70 @@
+// Functional end-to-end test of the production build, on desktop and mobile.
+//
+//   npm run build:pages && npm run test:e2e
+import { launch, newPage, PROFILES, startServer, wait, waitForMap } from './lib.mjs';
+
+const args = process.argv.slice(2);
+const profiles = args.find((a) => a.startsWith('--profile='))?.split('=')[1]?.split(',') ?? Object.keys(PROFILES);
+const failures = [];
+const check = (profile, name, ok, detail = '') => {
+  console.log(`${ok ? 'ok  ' : 'FAIL'} ${profile.padEnd(8)} ${name}${ok ? '' : `  (${detail})`}`);
+  if (!ok) failures.push(`${profile}: ${name}`);
+};
+
+const server = await startServer();
+const browser = await launch();
+try {
+  for (const profile of profiles) {
+    const page = await newPage(browser, profile);
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+    const value = () => page.$eval('#pc', (e) => e.value);
+    const card = () => page.$eval('.card', (e) => e.textContent ?? '').catch(() => '');
+
+    await page.goto(server.url + '/', { waitUntil: 'networkidle0' });
+    await waitForMap(page);
+    if (profile === 'desktop') check(profile, 'invoerveld heeft focus', (await page.evaluate(() => document.activeElement?.id)) === 'pc');
+    await page.focus('#pc');
+
+    await page.keyboard.type('3512ab');
+    await page.waitForFunction(() => document.querySelector('.card')?.textContent?.includes('Adressen'), { timeout: 15000 }).catch(() => {});
+    check(profile, 'letters worden opgemaakt', (await value()) === '3512 AB', await value());
+    check(profile, 'URL bevat de postcode', page.url().endsWith('?pc=3512AB'), page.url());
+    const c = await card();
+    check(profile, 'infokaart toont buurt en wijk', c.includes('Domplein') && c.includes('Binnenstad'), c.slice(0, 120));
+    check(profile, 'infokaart toont adressen', c.includes('Vinkenburgstraat') && /\d+ adressen/.test(c), c.slice(0, 160));
+
+    await page.keyboard.press('Backspace');
+    await wait(300);
+    check(profile, 'Backspace gaat een niveau terug', (await value()) === '3512 A', await value());
+    await page.keyboard.type('q');
+    await wait(300);
+    const notice = await page.$eval('.notice', (e) => e.textContent ?? '').catch(() => '');
+    check(profile, 'onbestaande letter wordt geweigerd', notice.includes('3512 AQ') && (await value()) === '3512 A', notice);
+
+    await page.keyboard.press('Escape');
+    await wait(1500);
+    check(profile, 'Esc gaat naar heel Nederland', (await value()) === '', await value());
+
+    const box = await (await page.$('canvas')).boundingBox();
+    const x = box.x + box.width * 0.5, y = box.y + box.height * 0.55;
+    if (PROFILES[profile].viewport.hasTouch) await page.touchscreen.tap(x, y);
+    else await page.mouse.click(x, y);
+    await wait(1500);
+    check(profile, 'klik op de kaart kiest een regio', /^\d$/.test(await value()), await value());
+
+    await page.click('.bar .btn');
+    await page.waitForFunction(() => /^\d{4} [A-Z]{2}$/.test(document.querySelector('#pc')?.value ?? ''), { timeout: 15000 }).catch(() => {});
+    check(profile, 'willekeurige postcode heeft letters', /^\d{4} [A-Z]{2}$/.test(await value()), await value());
+
+    check(profile, 'geen toetsenblok of lijst', !(await page.$('.keypad')) && !(await page.$('.kids')));
+    check(profile, 'geen fouten in de console', errors.length === 0, errors.join(' | '));
+    await page.close();
+  }
+} finally {
+  await browser.close();
+  server.stop();
+}
+console.log(failures.length ? `\n${failures.length} mislukt` : '\nalles ok');
+process.exit(failures.length ? 1 : 0);

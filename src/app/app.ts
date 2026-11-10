@@ -10,13 +10,13 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { AtlasMeta, Pc6Meta, children, formatCode, group, group6, places } from './atlas/atlas-data';
+import { AdrData, AtlasMeta, Pc6Meta, addressSummary, children, formatCode, group, group6, places } from './atlas/atlas-data';
 import type { FromRenderer, Theme, ToRenderer } from './atlas/protocol';
-import { DATA_FILE, PC6_DIR } from './data-file';
+import { ADR_DIR, DATA_FILE, PC6_DIR } from './data-file';
 
 // Start downloading the data the moment the bundle is evaluated (the <link rel=preload> in
 // index.html usually has it in flight already, this fetch then reuses that response).
-const dataPromise: Promise<ArrayBuffer> = fetch(DATA_FILE).then((r) => {
+const dataPromise: Promise<ArrayBuffer> = fetch(DATA_FILE, { priority: 'low' } as RequestInit).then((r) => {
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.arrayBuffer();
 });
@@ -70,6 +70,17 @@ export class App {
   protected readonly meta = signal<AtlasMeta | null>(null);
   /** PC6 data per PC4 as it arrives (null = this PC4 has no 6-character postcodes) */
   private readonly pc6s = signal(new Map<string, Pc6Meta | null>());
+  /** addresses per PC4 as they arrive */
+  private readonly adrs = signal(new Map<string, AdrData | null>());
+
+  /** streets with house number ranges of the 6-character postcode you are in */
+  protected readonly addresses = computed(() => {
+    const c = this.code();
+    if (c.length !== 6) return null;
+    const a = this.adrs().get(c.slice(0, 4));
+    if (a === undefined) return { count: -1, streets: [] as string[] };
+    return a ? addressSummary(a, c.slice(4)) : null;
+  });
   protected readonly error = signal('');
   protected readonly rejected = signal('');
   protected readonly rejectN = signal(0);
@@ -159,7 +170,7 @@ export class App {
     effect(() => {
       const c = this.code(), g = this.pc4(), m = this.meta();
       const name = c.length >= 4 ? g?.name : m && c ? group(m, c)?.name : '';
-      document.title = c && name ? `${formatCode(c)} ${name} · Postcode Atlas` : 'Postcode Atlas · Nederland cijfer voor cijfer';
+      document.title = c && name ? `${formatCode(c)} ${name} · Postcoderadar` : 'Postcoderadar · Nederland cijfer voor cijfer';
     });
 
     // the info card lies on top of the map: tell the renderer to centre below it
@@ -195,6 +206,7 @@ export class App {
         reduceMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
         code: this.code(),
         pc6Dir: PC6_DIR,
+        adrDir: ADR_DIR,
       };
       if (typeof canvas.transferControlToOffscreen === 'function' && typeof Worker !== 'undefined') {
         const worker = new Worker(new URL('./atlas/map.worker', import.meta.url), { type: 'module' });
@@ -252,6 +264,14 @@ export class App {
           this.randomPc4 = '';
           if (m.meta && this.code() === m.pc4) this.code.set(m.pc4 + m.meta.codes[Math.floor(Math.random() * m.meta.n)]);
         }
+        break;
+      }
+      case 'adr': {
+        const map = new Map(this.adrs());
+        map.delete(m.pc4);
+        map.set(m.pc4, m.data);
+        while (map.size > 12) map.delete(map.keys().next().value!);
+        this.adrs.set(map);
         break;
       }
       case 'error':

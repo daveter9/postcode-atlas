@@ -31,6 +31,12 @@
         <h2 class="title">{{ display() }} <span class="sub">{{ subtitle() }}</span></h2>
         @if (pc6Facts(); as p) {
           <dl class="facts">
+            @if (addresses(); as ad) {
+              <div>
+                <dt>Adressen</dt>
+                <dd>{{ ad.count < 0 ? 'laden…' : ad.streets.join('; ') + ' · ' + ad.count + ' adressen' }}</dd>
+              </div>
+            }
             @if (p.wijk) {
               <div><dt>Wijk</dt><dd>{{ p.wijk }}</dd></div>
             }

@@ -9,7 +9,7 @@
 // Zooming far out stays fluid because the PC4 map has levels of detail (coarser arcs when
 // one pixel covers more ground).
 import {
-  AtlasGeom, AtlasMeta, Pc6Meta, children, children6, colorSlot, decodeAtlas, decodePc6, formatCode, group, group6,
+  AdrData, AtlasGeom, AtlasMeta, Pc6Meta, adrRange, children, children6, colorSlot, decodeAdr, decodeAtlas, decodePc6, formatCode, group, group6,
 } from './atlas-data';
 import type { FromRenderer, Theme, ToRenderer } from './protocol';
 
@@ -222,6 +222,7 @@ export function createRenderer(post: (m: FromRenderer) => void): (m: ToRenderer)
   let theme: Theme;
   let reduceMotion = false;
   let pc6Dir = '';
+  let adrDir = '';
   let meta: AtlasMeta | null = null;
   let geom: AtlasGeom;
   let baseArcs: Arcs;
@@ -230,6 +231,7 @@ export function createRenderer(post: (m: FromRenderer) => void): (m: ToRenderer)
   const pc4Paths = new Map<string, Path2D>();
   const pc4Outlines = new Map<string, Path2D>();
   const details = new Map<string, Detail | null | 'loading'>();
+  const addrs = new Map<string, AdrData | null | 'loading'>();
 
   let requested = ''; // latest code from the UI
   let pending = ''; // code waiting for its PC6 file
@@ -386,6 +388,35 @@ export function createRenderer(post: (m: FromRenderer) => void): (m: ToRenderer)
   }
 
   // ---------- PC6 files ----------
+  /** Addresses of a PC4: fetched as soon as a letter is typed, drawn inside a 6-character postcode. */
+  function ensureAddresses(pc4: string) {
+    if (addrs.has(pc4) || !meta || !adrDir) return;
+    addrs.set(pc4, 'loading');
+    fetch(`${adrDir}/${pc4}.bin`)
+      .then((r) => (r.ok ? r.arrayBuffer() : null))
+      .then((buf) => {
+        const data = buf ? decodeAdr(buf, pc4, meta!) : null;
+        addrs.set(pc4, data);
+        post({ t: 'adr', pc4, data });
+      })
+      .catch(() => {
+        addrs.set(pc4, null);
+        post({ t: 'adr', pc4, data: null });
+      })
+      .finally(() => {
+        for (const k of [...addrs.keys()]) {
+          if (addrs.size <= MAX_DETAILS) break;
+          if (k !== requested.slice(0, 4) && addrs.get(k) !== 'loading') addrs.delete(k);
+        }
+        schedule();
+      });
+  }
+
+  const addressesOf = (code: string): AdrData | null => {
+    const a = code.length === 6 ? addrs.get(code.slice(0, 4)) : null;
+    return a && a !== 'loading' ? a : null;
+  };
+
   function ensureDetail(pc4: string) {
     if (details.has(pc4) || !meta || !group(meta, pc4)) return;
     details.set(pc4, 'loading');
@@ -439,7 +470,7 @@ export function createRenderer(post: (m: FromRenderer) => void): (m: ToRenderer)
     const m = meta!;
     const box = nodeBox(code) ?? group(m, '')!.bbox;
     const leaf = kidsOf(code).length === 0;
-    const pad = leaf ? (code.length === 6 ? 3.2 : 1.9) : 1.12;
+    const pad = leaf ? (code.length === 6 ? 1.6 : 1.9) : 1.12;
     // fit into the part of the canvas not covered by the info card
     const top = Math.min(insetTop, h * 0.4), bottom = Math.min(insetBottom, h * 0.2);
     const hh = Math.max(40, h - top - bottom);
@@ -478,6 +509,7 @@ export function createRenderer(post: (m: FromRenderer) => void): (m: ToRenderer)
   function go(to: string, refresh = false) {
     if (!meta) return;
     if (to.length >= 4) ensureDetail(to.slice(0, 4));
+    if (to.length >= 5) ensureAddresses(to.slice(0, 4));
     if (to.length > 4 && !detailOf(to)) {
       // letters typed before the PC6 file arrived: go to the PC4 first, continue when it is loaded
       pending = details.get(to.slice(0, 4)) === null ? '' : to;
@@ -732,7 +764,43 @@ export function createRenderer(post: (m: FromRenderer) => void): (m: ToRenderer)
       const kids = kidsOf(l.code);
       if (!kids.length) {
         const n = l.code ? nodeLabel(l.code) : null;
-        if (n) put(sx(n.x), sy(n.y), formatCode(l.code), n.name, 20, true, l.alpha);
+        const ad = addressesOf(l.code);
+        if (n && ad) {
+          // the code goes above the area, the area itself shows its addresses
+          const box = nodeBox(l.code)!;
+          put(sx((box[0] + box[2]) / 2), Math.max(22, sy(box[1]) - 22), formatCode(l.code), n.name, 18, true, l.alpha);
+        } else if (n) put(sx(n.x), sy(n.y), formatCode(l.code), n.name, 20, true, l.alpha);
+        if (ad) {
+          // one dot per house number (apartments share it), street names, then the numbers
+          const [lo, hi] = adrRange(ad, l.code.slice(4));
+          const pts = new Map<string, { s: number; nr: number; x: number; y: number; n: number }>();
+          for (let i = lo; i < hi; i++) {
+            const key = ad.street[i] + '|' + ad.nr[i];
+            const pt = pts.get(key);
+            if (pt) { pt.x += ad.x[i]; pt.y += ad.y[i]; pt.n++; }
+            else pts.set(key, { s: ad.street[i], nr: ad.nr[i], x: ad.x[i], y: ad.y[i], n: 1 });
+          }
+          const list = [...pts.values()].map((pt) => ({ ...pt, X: sx(pt.x / pt.n), Y: sy(pt.y / pt.n) }));
+          ctx.globalAlpha = l.alpha;
+          ctx.fillStyle = theme.ink;
+          ctx.strokeStyle = theme.halo;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          for (const pt of list) {
+            ctx.moveTo(pt.X + 3, pt.Y);
+            ctx.arc(pt.X, pt.Y, 3, 0, Math.PI * 2);
+          }
+          ctx.stroke();
+          ctx.fill();
+          const streets = new Map<number, { x: number; y: number; n: number }>();
+          for (const pt of list) {
+            const st = streets.get(pt.s);
+            if (st) { st.x += pt.X; st.y += pt.Y; st.n++; }
+            else streets.set(pt.s, { x: pt.X, y: pt.Y, n: 1 });
+          }
+          for (const [si, st] of streets) put(st.x / st.n, st.y / st.n + 16, ad.strings[si], '', 13, false, l.alpha);
+          for (const pt of list.sort((p, q) => p.nr - q.nr)) put(pt.X, pt.Y - 10, String(pt.nr), '', 10, false, l.alpha, true);
+        }
         continue;
       }
       const ordered: { c: string; n: NonNullable<ReturnType<typeof nodeLabel>> }[] = [];
@@ -819,6 +887,7 @@ export function createRenderer(post: (m: FromRenderer) => void): (m: ToRenderer)
         reduceMotion = msg.reduceMotion;
         requested = msg.code;
         pc6Dir = msg.pc6Dir;
+        adrDir = msg.adrDir;
         resize(msg.w, msg.h, msg.dpr);
         break;
       }

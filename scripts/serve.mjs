@@ -3,6 +3,9 @@
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
+import { brotliCompressSync, constants } from 'node:zlib';
+
+const compressed = new Map();
 
 const root = process.argv[2] ?? 'dist/postcode-atlas/browser';
 const port = Number(process.env.PORT ?? 4300);
@@ -31,7 +34,16 @@ createServer(async (req, res) => {
     if (!ae.includes(e)) continue;
     try { body = await readFile(file + ext); enc = e; break; } catch {}
   }
-  body ??= await readFile(file);
+  if (!body) {
+    // no precompressed file (a Cloudflare build): compress like the CDN would, once per file
+    body = await readFile(file);
+    if (ae.includes('br') && /\.(html|js|css|svg|bin|txt|json|xml)$/.test(file) && body.length > 512) {
+      let c = compressed.get(file);
+      if (!c) compressed.set(file, (c = brotliCompressSync(body, { params: { [constants.BROTLI_PARAM_QUALITY]: 6 } })));
+      body = c;
+      enc = 'br';
+    }
+  }
   const headers = {
     'Content-Type': TYPES[extname(file)] ?? 'application/octet-stream',
     'Cache-Control': HASHED.test(file) ? 'public, max-age=31536000, immutable' : 'no-cache',

@@ -9,11 +9,16 @@
     "test": "ng test",
     "data:fetch": "node scripts/fetch-data.mjs",
     "data:build": "node scripts/build-data.mjs",
-    "build:pages": "ng build",
-    "deploy:pages": "ng build && npx wrangler@4 pages deploy dist/postcode-atlas/browser --project-name=postcode-atlas",
+    "build:pages": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && ng build",
     "perf:frames": "node tests/frames.mjs",
     "data:pc6": "node --max-old-space-size=8192 scripts/build-pc6.mjs",
-    "data:adr": "node --max-old-space-size=8192 scripts/build-adr.mjs"
+    "data:adr": "node --max-old-space-size=8192 scripts/build-adr.mjs",
+    "deploy": "npm run build:pages && npx wrangler@4 deploy",
+    "preview": "npm run build && wrangler dev",
+    "test:e2e": "node tests/e2e.mjs",
+    "test:load": "node tests/load.mjs",
+    "test:lighthouse": "node tests/lighthouse.mjs",
+    "test:all": "npm run build:pages && node tests/e2e.mjs && node tests/load.mjs --assert && node tests/lighthouse.mjs --assert && node tests/frames.mjs"
   },
   "private": true,
   "packageManager": "npm@11.20.0",
@@ -35,6 +40,7 @@
     "polylabel": "^2.1.0",
     "prettier": "^3.8.1",
     "puppeteer-core": "^25.17.0",
-    "typescript": "~6.0.2"
+    "typescript": "~6.0.2",
+    "wrangler": "^4.160.0"
   }
 }

@@ -1,0 +1,18 @@
+{
+  // Cloudflare Workers with static assets only (the successor of Pages): no server code runs,
+  // Cloudflare serves the files in dist/ and applies public/_headers.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "postcoderadar",
+  "compatibility_date": "2026-11-10",
+  "assets": {
+    "directory": "./dist/postcode-atlas/browser"
+  },
+  // the zone postcoderadar.nl must be active in this Cloudflare account; DNS records and
+  // certificates for these hostnames are created automatically on deploy
+  "routes": [
+    { "pattern": "postcoderadar.nl", "custom_domain": true },
+    { "pattern": "www.postcoderadar.nl", "custom_domain": true }
+  ],
+  "workers_dev": true,
+  "preview_urls": false
+}
