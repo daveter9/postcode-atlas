@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <title>Postcode Atlas · Nederland cijfer voor cijfer</title>
+    <meta name="description" content="Typ een postcode en zie Nederland per cijfer inzoomen: van negen postcoderegio's tot één postcodegebied, met plaats, gemeente en inwonertal." />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f5f1" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#14161a" />
+    <meta property="og:title" content="Postcode Atlas" />
+    <meta property="og:description" content="Nederland cijfer voor cijfer: typ een postcode en de kaart zoomt mee." />
+    <meta property="og:type" content="website" />
+    <base href="/" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="preload" href="data/pc4.abb1b2dac8.bin" as="fetch" type="application/octet-stream" crossorigin="anonymous" />
+  </head>
+  <body>
+    <a class="skip" href="#pc">Naar de invoer</a>
+    <div class="wrap">
+      <header class="site">
+        <h1>Postcode Atlas</h1>
+      </header>
+      <main>
+        <app-root></app-root>
+      </main>
+      <footer class="sources">
+        <p>
+          Data:
+          <a href="https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/gegevens-per-postcode">CBS postcodegebieden en cijfers 2024</a>
+          (via <a href="https://api.pdok.nl/cbs/postcode4/ogc/v1">PDOK</a>) ·
+          <a href="https://www.cbs.nl/nl-nl/maatwerk/2026/38/buurt-wijk-en-gemeente-2026-voor-postcode-huisnummer">CBS buurten en wijken 2026</a> ·
+          <a href="https://www.geonames.org/">GeoNames</a> ·
+          <a href="https://creativecommons.org/licenses/by/4.0/deed.nl">CC BY 4.0</a>.
+          Vlakken vereenvoudigd.
+        </p>
+        <noscript><p>Deze kaart heeft JavaScript nodig.</p></noscript>
+      </footer>
+    </div>
+  </body>
+</html>

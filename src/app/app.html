@@ -1,0 +1,103 @@
+<section class="map-panel" aria-label="Kaart">
+  <canvas
+    #map
+    role="img"
+    [attr.aria-label]="'Kaart. ' + summary()"
+    (pointermove)="onPointerMove($event)"
+    (pointerleave)="onPointerLeave()"
+    (click)="onMapClick($event)"
+  ></canvas>
+
+  @if (error()) {
+    <p class="status error" role="alert">{{ error() }}</p>
+  } @else if (!meta()) {
+    <p class="status">Postcodegebieden laden…</p>
+  }
+
+  @if (meta()) {
+    <div #card class="card">
+      @if (code()) {
+        <nav class="trail" aria-label="Pad">
+          <ol>
+            <li><button type="button" (click)="setCode('')">Nederland</button></li>
+            @for (t of trail(); track t) {
+              <li><button type="button" (click)="setCode(t)">{{ formatCode(t) }}</button></li>
+            }
+          </ol>
+        </nav>
+      }
+
+      @if (code().length >= 4 && pc4Facts(); as f) {
+        <h2 class="title">{{ display() }} <span class="sub">{{ subtitle() }}</span></h2>
+        @if (pc6Facts(); as p) {
+          <dl class="facts">
+            @if (p.wijk) {
+              <div><dt>Wijk</dt><dd>{{ p.wijk }}</dd></div>
+            }
+            <div><dt>Plaats</dt><dd>{{ f.places[0] || f.gem }}</dd></div>
+            <div><dt>Inwoners</dt><dd>{{ p.inw > 0 ? fmt(p.inw) : 'afgeschermd' }}</dd></div>
+            <div><dt>Woningen</dt><dd>{{ p.won > 0 ? fmt(p.won) : 'afgeschermd' }}</dd></div>
+            <div><dt>Gem. WOZ</dt><dd>{{ p.woz > 0 ? '€ ' + fmt(p.woz * 1000) : 'onbekend' }}</dd></div>
+            <div><dt>Koopwoningen</dt><dd>{{ p.koop >= 0 ? p.koop + '%' : 'onbekend' }}</dd></div>
+          </dl>
+        } @else if (group6Stats(); as g) {
+          <p class="stats">
+            @if (g.wijk) {
+              {{ g.wijk }} ·
+            }
+            {{ g.hi - g.lo }} postcodes · {{ fmt(g.inw) }} inwoners
+          </p>
+        } @else {
+          <p class="stats">
+            Gemeente {{ f.gem || '–' }}, {{ f.prov || '–' }} · {{ f.inw ? fmt(f.inw) + ' inwoners' : 'inwoners onbekend' }}
+          </p>
+          @if (m6() === undefined) {
+            <p class="stats">Postcodes met letters laden…</p>
+          } @else if (m6() === null) {
+            <p class="stats">Geen postcodes met letters die een gebied hebben.</p>
+          } @else {
+            <p class="stats">{{ m6()!.n }} postcodes · typ de eerste letter</p>
+          }
+        }
+      } @else if (pc4(); as g) {
+        <h2 class="title">
+          @if (code()) {
+            {{ code() }}<span class="dots" aria-hidden="true">{{ '····'.slice(code().length) }}</span>
+            <span class="sub">rond {{ g.name }}</span>
+          } @else {
+            Nederland
+          }
+        </h2>
+        <p class="stats">{{ fmt(g.hi - g.lo) }} postcodegebieden · {{ fmt(g.inw) }} inwoners</p>
+      }
+    </div>
+  }
+
+  @if (rejected(); as r) {
+    <p class="notice" role="status">Geen postcode begint met <strong>{{ r }}</strong>.</p>
+  }
+</section>
+
+<div class="bar">
+  <label class="sr-only" for="pc">Postcode</label>
+  <input
+    #pcInput
+    id="pc"
+    class="pc-input"
+    [class.shake-a]="rejectN() % 2 === 1"
+    [class.shake-b]="rejectN() > 0 && rejectN() % 2 === 0"
+    type="text"
+    inputmode="text"
+    autocomplete="off"
+    autocapitalize="characters"
+    spellcheck="false"
+    maxlength="8"
+    placeholder="1234 AB"
+    aria-describedby="hint"
+    [value]="display()"
+    (input)="onInput($event)"
+  />
+  <button type="button" class="btn" [disabled]="!meta()" (click)="randomPostcode()">Willekeurige postcode</button>
+  <p id="hint" class="sr-only">Typ een postcode of klik op de kaart. Backspace zoomt uit, Escape gaat terug naar heel Nederland.</p>
+  <p class="sr-only" aria-live="polite">{{ rejected() ? 'Er bestaat geen postcode die begint met ' + rejected() + '.' : summary() }}</p>
+</div>
