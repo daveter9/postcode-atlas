@@ -13,6 +13,6 @@
     { "pattern": "postcoderadar.nl", "custom_domain": true },
     { "pattern": "www.postcoderadar.nl", "custom_domain": true }
   ],
-  "workers_dev": true,
+  "workers_dev": false,
   "preview_urls": false
 }

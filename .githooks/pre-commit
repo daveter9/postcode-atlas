@@ -1,0 +1,5 @@
+#!/bin/sh
+# Every commit raises the site version by 0.1 (see scripts/bump-version.mjs).
+# Enabled per clone with: git config core.hooksPath .githooks   (npm install does this, see "prepare")
+node scripts/bump-version.mjs || exit 1
+git add VERSION src/app/version.ts
