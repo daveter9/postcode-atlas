@@ -58,7 +58,28 @@ try {
     await page.waitForFunction(() => /^\d{4} [A-Z]{2}$/.test(document.querySelector('#pc')?.value ?? ''), { timeout: 15000 }).catch(() => {});
     check(profile, 'willekeurige postcode heeft letters', /^\d{4} [A-Z]{2}$/.test(await value()), await value());
 
-    check(profile, 'geen toetsenblok of lijst', !(await page.$('.keypad')) && !(await page.$('.kids')));
+    if (PROFILES[profile].viewport.hasTouch) {
+      // touchscreen: own keypad, system keyboard off
+      check(profile, 'systeemtoetsenbord uit', (await page.$eval('#pc', (e) => e.inputMode)) === 'none');
+      await page.keyboard.press('Escape');
+      await wait(500);
+      const tap = (k) => page.$$eval('.keypad button', (bs, k) => bs.find((b) => b.textContent.trim() === k)?.click(), k);
+      check(profile, '0 is uitgegrijsd als eerste cijfer', await page.$$eval('.keypad button', (bs) => bs.find((b) => b.textContent.trim() === '0').disabled));
+      for (const k of ['3', '5', '1', '2']) await tap(k);
+      await page.waitForFunction(() => document.querySelectorAll('.keypad button').length === 27, { timeout: 5000 }).catch(() => {});
+      check(profile, 'toetsenblok wisselt naar letters', (await page.$$('.keypad button')).length === 27);
+      await page.waitForFunction(() => [...document.querySelectorAll('.keypad button')].some((b) => b.textContent.trim() === 'A' && !b.disabled), { timeout: 15000 }).catch(() => {});
+      await tap('A');
+      await tap('B');
+      check(profile, 'tikken op het toetsenblok', (await value()) === '3512 AB', await value());
+      await tap('⌫');
+      check(profile, 'wissen op het toetsenblok', (await value()) === '3512 A', await value());
+      const kp = await (await page.$('.keypad')).boundingBox();
+      check(profile, 'toetsenblok is compact', kp.height <= 130, String(kp.height));
+      check(profile, 'geen lijst', !(await page.$('.kids')));
+    } else {
+      check(profile, 'geen toetsenblok of lijst', !(await page.$('.keypad')) && !(await page.$('.kids')));
+    }
     check(profile, 'geen fouten in de console', errors.length === 0, errors.join(' | '));
     await page.close();
   }

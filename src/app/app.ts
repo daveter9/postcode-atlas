@@ -52,43 +52,6 @@ function readTheme(): Theme {
   };
 }
 
-/**
- * Phones: while the on-screen keyboard is open, fit the page into the space above it (class
- * `kb` on <html>, height and offset of the visible area in --kb-h / --kb-top). Chrome on
- * Android already resizes the layout (interactive-widget=resizes-content); iOS only shrinks
- * the visual viewport, so the page follows that.
- */
-function watchKeyboard(destroyRef: DestroyRef) {
-  const vv = window.visualViewport;
-  if (!vv || !matchMedia('(pointer: coarse)').matches) return;
-  const root = document.documentElement;
-  let full = 0;
-  let width = 0;
-  const update = () => {
-    if (innerWidth !== width) {
-      width = innerWidth; // rotated: measure the full height again
-      full = 0;
-    }
-    full = Math.max(full, innerHeight, vv.height);
-    const kb = vv.scale < 1.01 && full - vv.height > 150;
-    root.classList.toggle('kb', kb);
-    if (kb) {
-      root.style.setProperty('--kb-h', `${vv.height}px`);
-      root.style.setProperty('--kb-top', `${vv.offsetTop}px`);
-    } else {
-      root.style.removeProperty('--kb-h');
-      root.style.removeProperty('--kb-top');
-    }
-  };
-  vv.addEventListener('resize', update);
-  vv.addEventListener('scroll', update);
-  destroyRef.onDestroy(() => {
-    vv.removeEventListener('resize', update);
-    vv.removeEventListener('scroll', update);
-  });
-  update();
-}
-
 @Component({
   selector: 'app-root',
   templateUrl: './app.html',
@@ -121,6 +84,16 @@ export class App {
   protected readonly error = signal('');
   protected readonly rejected = signal('');
   protected readonly rejectN = signal(0);
+
+  /** touchscreen: show our own keypad and keep the system keyboard away */
+  protected readonly touch = matchMedia('(pointer: coarse)').matches;
+  /** keypad keys: digits, after four digits letters; keys that lead to no postcode are disabled */
+  protected readonly keypad = computed(() => {
+    const c = this.code();
+    const letters = c.length >= 4;
+    const chars = letters ? 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' : '1234567890';
+    return { letters, keys: [...chars].map((k) => ({ k, ok: c.length < 6 && this.isValid(c + k) })) };
+  });
 
   protected readonly display = computed(() => formatCode(this.code()));
 
@@ -220,7 +193,6 @@ export class App {
     });
 
     afterNextRender(() => {
-      watchKeyboard(destroyRef);
       this.inputRef().nativeElement.focus({ preventScroll: true });
       void this.start(destroyRef);
     });
@@ -369,6 +341,14 @@ export class App {
     if (el.value !== shown) el.value = shown;
   }
 
+  /** keypad: a character, or '' to erase the last one */
+  protected press(k: string) {
+    const c = this.code();
+    if (!k) this.setCode(c.slice(0, -1));
+    else if (this.isValid(c + k)) this.setCode(c + k);
+    else this.reject(c + k);
+  }
+
   protected randomPostcode() {
     const m = this.meta();
     if (!m) return;
@@ -389,11 +369,7 @@ export class App {
       this.setCode('');
       return;
     }
-    if (e.target === input) {
-      // "Gereed" on a phone keyboard: close the keyboard so the whole map is visible again
-      if (e.key === 'Enter' && matchMedia('(pointer: coarse)').matches) input.blur();
-      return; // the field handles its own typing
-    }
+    if (e.target === input) return; // the field handles its own typing
     const t = e.target as HTMLElement;
     if (/^[0-9a-zA-Z]$/.test(e.key) || e.key === 'Backspace') {
       if (t.tagName === 'BUTTON' && (e.key === ' ' || e.key === 'Enter')) return;

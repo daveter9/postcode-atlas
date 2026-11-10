@@ -391,16 +391,44 @@ app-root {
   }
 }
 
-/* phone keyboard open: only map and input bar, in the space above the keyboard */
-.kb .wrap {
-  height: var(--kb-h, 100dvh);
-  min-height: 0;
-  translate: 0 var(--kb-top, 0);
-  padding-bottom: 6px;
+/* touchscreens: compact keypad under the input bar. Always three rows high, so the map
+   does not change size when the digits make way for the letters. */
+.keypad {
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr) 1.2fr;
+  grid-template-rows: repeat(3, 1fr);
+  gap: 5px;
+  height: 124px;
 }
-.kb header.site,
-.kb .sources {
-  display: none;
+.keypad.letters {
+  grid-template-columns: repeat(9, 1fr);
+}
+.keypad button {
+  min-width: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--key);
+  font-size: 1.2rem;
+  font-weight: 600;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.keypad button:active:not(:disabled) {
+  background: var(--key-hover);
+  border-color: var(--accent);
+}
+.keypad button:disabled {
+  opacity: 0.3;
+}
+/* digits: two rows of five, erase key over the full height on the right */
+.keypad:not(.letters) {
+  grid-template-rows: repeat(2, 1fr);
+}
+.keypad:not(.letters) .del {
+  grid-column: 6;
+  grid-row: 1 / -1;
 }
 
 @media (prefers-reduced-motion: reduce) {

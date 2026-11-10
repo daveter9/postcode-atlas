@@ -93,8 +93,7 @@
     [class.shake-a]="rejectN() % 2 === 1"
     [class.shake-b]="rejectN() > 0 && rejectN() % 2 === 0"
     type="text"
-    [attr.inputmode]="code().length < 4 ? 'numeric' : 'text'"
-    enterkeyhint="done"
+    [attr.inputmode]="touch ? 'none' : 'text'"
     autocomplete="off"
     autocorrect="off"
     autocapitalize="characters"
@@ -109,3 +108,13 @@
   <p id="hint" class="sr-only">Typ een postcode of klik op de kaart. Backspace zoomt uit, Escape gaat terug naar heel Nederland.</p>
   <p class="sr-only" aria-live="polite">{{ rejected() ? 'Er bestaat geen postcode die begint met ' + rejected() + '.' : summary() }}</p>
 </div>
+
+@if (touch) {
+  <!-- touchscreens: our own compact keypad instead of the half-screen system keyboard -->
+  <div class="keypad" [class.letters]="keypad().letters" role="group" aria-label="Toetsenblok">
+    @for (key of keypad().keys; track key.k) {
+      <button type="button" [disabled]="!key.ok" (mousedown)="$event.preventDefault()" (click)="press(key.k)">{{ key.k }}</button>
+    }
+    <button type="button" class="del" aria-label="Wissen" [disabled]="!code()" (mousedown)="$event.preventDefault()" (click)="press('')">⌫</button>
+  </div>
+}
