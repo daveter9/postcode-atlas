@@ -305,7 +305,9 @@ app-root {
 .bar {
   flex: none;
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr; /* the input; buttons follow in auto-sized columns */
+  grid-auto-flow: column;
+  grid-auto-columns: auto;
   gap: 8px;
 }
 .pc-input {
@@ -421,44 +423,48 @@ app-root {
   }
 }
 
-/* touchscreens: compact keypad under the input bar. Always three rows high, so the map
-   does not change size when the digits make way for the letters. */
+/* touchscreens: compact QWERTY keypad under the input bar (digits on top). Every key is a
+   tenth of the width; shorter rows are centred, the erase key is two keys wide. */
 .keypad {
+  --kw: calc((100% - 9 * 4px) / 10);
   flex: none;
-  display: grid;
-  grid-template-columns: repeat(5, 1fr) 1.2fr;
-  grid-template-rows: repeat(3, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 5px;
-  height: 124px;
+  height: 168px;
 }
-.keypad.letters {
-  grid-template-columns: repeat(9, 1fr);
+.krow {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  gap: 4px;
 }
 .keypad button {
+  flex: 0 0 var(--kw);
   min-width: 0;
   padding: 0;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 7px;
   background: var(--key);
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 600;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
-.keypad button:active:not(:disabled) {
+.keypad .del {
+  flex-basis: calc(2 * var(--kw) + 4px);
+}
+.keypad button:active:not(:disabled),
+.bar .del:active {
   background: var(--key-hover);
   border-color: var(--accent);
 }
 .keypad button:disabled {
   opacity: 0.3;
 }
-/* digits: two rows of five, erase key over the full height on the right */
-.keypad:not(.letters) {
-  grid-template-rows: repeat(2, 1fr);
-}
-.keypad:not(.letters) .del {
-  grid-column: 6;
-  grid-row: 1 / -1;
+.bar .del {
+  min-width: 56px;
+  font-size: 1.3rem;
 }
 
 @media (prefers-reduced-motion: reduce) {

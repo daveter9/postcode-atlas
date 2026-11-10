@@ -87,12 +87,17 @@ export class App {
 
   /** touchscreen: show our own keypad and keep the system keyboard away */
   protected readonly touch = matchMedia('(pointer: coarse)').matches;
-  /** keypad keys: digits, after four digits letters; keys that lead to no postcode are disabled */
+  /** the postcode is complete (six characters, or four where no letters exist): keypad folds away */
+  protected readonly complete = computed(() => {
+    const c = this.code();
+    return c.length === 6 || (c.length === 4 && this.pc6s().get(c) === null);
+  });
+  /** QWERTY keypad rows: digits first, letters after four digits; keys that lead to no postcode are disabled */
   protected readonly keypad = computed(() => {
     const c = this.code();
-    const letters = c.length >= 4;
-    const chars = letters ? 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' : '1234567890';
-    return { letters, keys: [...chars].map((k) => ({ k, ok: c.length < 6 && this.isValid(c + k) })) };
+    return ['1234567890', 'QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'].map((row, r) =>
+      [...row].map((k) => ({ k, ok: (r === 0 ? c.length < 4 : c.length >= 4 && c.length < 6) && this.isValid(c + k) })),
+    );
   });
 
   protected readonly display = computed(() => formatCode(this.code()));
