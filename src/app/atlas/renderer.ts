@@ -903,6 +903,7 @@ export function createRenderer(post: (m: FromRenderer) => void): (m: ToRenderer)
           let start = requested.slice(0, 4);
           while (start && !group(meta, start)) start = start.slice(0, -1);
           shown = start;
+          if (shown.length >= 4) ensureDetail(shown.slice(0, 4)); // a deep link to a PC4 needs its letters too
           view = targetView(shown);
           schedule();
           post({ t: 'ready', meta });
