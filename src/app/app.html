@@ -32,12 +32,6 @@
         <h2 class="title">{{ display() }} <span class="sub">{{ subtitle() }}</span></h2>
         @if (pc6Facts(); as p) {
           <dl class="facts">
-            @if (addresses(); as ad) {
-              <div>
-                <dt>Adressen</dt>
-                <dd>{{ ad.count < 0 ? 'laden…' : ad.streets.join('; ') + ' · ' + ad.count + ' adressen' }}</dd>
-              </div>
-            }
             @if (p.wijk) {
               <div><dt>Wijk</dt><dd>{{ p.wijk }}</dd></div>
             }
@@ -46,6 +40,13 @@
             <div><dt>Woningen</dt><dd>{{ p.won > 0 ? fmt(p.won) : 'afgeschermd' }}</dd></div>
             <div><dt>Gem. WOZ</dt><dd>{{ p.woz > 0 ? '€ ' + fmt(p.woz * 1000) : 'onbekend' }}</dd></div>
             <div><dt>Koopwoningen</dt><dd>{{ p.koop >= 0 ? p.koop + '%' : 'onbekend' }}</dd></div>
+            <!-- last: the street list arrives later and may wrap; growing at the bottom moves nothing -->
+            @if (addresses(); as ad) {
+              <div>
+                <dt>Adressen</dt>
+                <dd>{{ ad.count < 0 ? 'laden…' : ad.streets.join('; ') + ' · ' + ad.count + ' adressen' }}</dd>
+              </div>
+            }
           </dl>
         } @else if (group6Stats(); as g) {
           <p class="stats">

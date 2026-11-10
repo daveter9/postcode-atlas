@@ -199,7 +199,9 @@ export class App {
     });
 
     afterNextRender(() => {
-      this.inputRef().nativeElement.focus({ preventScroll: true });
+      // Focus only after the first frame is painted: focus() needs an up-to-date layout, and
+      // calling it right after rendering would force the whole first layout inside this task.
+      requestAnimationFrame(() => setTimeout(() => this.inputRef().nativeElement.focus({ preventScroll: true })));
       void this.start(destroyRef);
     });
   }
