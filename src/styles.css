@@ -423,37 +423,25 @@ app-root {
   }
 }
 
-/* touchscreens: compact keypad under the input bar. Letters: QWERTY, every key a tenth of the
-   width, shorter rows centred, the erase key two keys wide. Digits: two rows of five with the
-   erase key over the full height. Both are equally high, so the map does not jump. */
+/* touchscreens: compact keypad under the input bar. One grid for digits and letters: three rows,
+   twenty half-key columns, so the erase key always sits in the same spot, bottom right and one
+   and a half keys wide (like a phone keyboard), and the map does not jump.
+   Letters: QWERTY, every key a tenth of the width, the second row half a key in, the third row
+   one and a half keys in. Digits: two rows of five wide keys above the erase key. */
 .keypad {
-  --kw: calc((100% - 9 * 4px) / 10);
   flex: none;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
+  display: grid;
+  grid-template-columns: repeat(20, minmax(0, 1fr));
+  grid-template-rows: repeat(3, 1fr);
+  column-gap: 4px;
+  row-gap: 5px;
   height: 124px;
 }
-.keypad.digits {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr) 1.2fr;
-  grid-template-rows: repeat(2, 1fr);
-}
-.keypad.digits .krow {
+.krow {
   display: contents;
 }
-.keypad.digits .del {
-  grid-column: 6;
-  grid-row: 1 / -1;
-}
-.krow {
-  display: flex;
-  flex: 1;
-  justify-content: center;
-  gap: 4px;
-}
 .keypad button {
-  flex: 0 0 var(--kw);
+  grid-column-end: span 2;
   min-width: 0;
   padding: 0;
   border: 1px solid var(--line);
@@ -464,8 +452,19 @@ app-root {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
-.keypad .del {
-  flex-basis: calc(2 * var(--kw) + 4px);
+.krow:nth-child(1) > button { grid-row: 1; }
+.krow:nth-child(2) > button { grid-row: 2; }
+.krow:nth-child(3) > button { grid-row: 3; }
+/* letters: indent rows two and three with an empty grid item in front (a definite start column
+   on the first key would let auto-placement put the next keys before it) */
+.keypad:not(.digits) .krow:nth-child(2)::before { content: ''; grid-row: 2; grid-column-end: span 1; }
+.keypad:not(.digits) .krow:nth-child(3)::before { content: ''; grid-row: 3; grid-column-end: span 3; }
+.keypad.digits button {
+  grid-column-end: span 4;
+}
+.keypad .krow > .del {
+  grid-row: 3;
+  grid-column: 18 / 21;
 }
 .keypad button:active:not(:disabled),
 .bar .del:active {

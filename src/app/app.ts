@@ -98,7 +98,7 @@ export class App {
   protected readonly keypad = computed(() => {
     const c = this.code();
     const letters = c.length >= 4;
-    const rows = letters ? ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'] : ['1234567890'];
+    const rows = letters ? ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'] : ['12345', '67890'];
     return { letters, rows: rows.map((row) => [...row].map((k) => ({ k, ok: c.length < 6 && this.isValid(c + k) }))) };
   });
 
