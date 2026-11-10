@@ -85,8 +85,9 @@ export class App {
   protected readonly rejected = signal('');
   protected readonly rejectN = signal(0);
 
-  /** touchscreen: show our own keypad and keep the system keyboard away */
-  protected readonly touch = matchMedia('(pointer: coarse)').matches;
+  /** phones and tablets only (touch, and no mouse or trackpad that can hover): show our own keypad
+   *  and keep the system keyboard away. A laptop or desktop with a touchscreen keeps typing normally. */
+  protected readonly touch = matchMedia('(pointer: coarse) and (any-hover: none)').matches;
   /** the postcode is complete (six characters, or four where no letters exist): keypad folds away */
   protected readonly complete = computed(() => {
     const c = this.code();
