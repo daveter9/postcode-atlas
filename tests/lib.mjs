@@ -2,10 +2,15 @@
 // and the device profiles every test runs on.
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { Launcher } from 'chrome-launcher';
 import puppeteer from 'puppeteer-core';
 
-export const ROOT = new URL('../', import.meta.url);
+// APP_ROOT points the helpers at another checkout (a git worktree), e.g. for scripts/pr-evidence.mjs
+export const ROOT = process.env.APP_ROOT
+  ? pathToFileURL(resolve(process.env.APP_ROOT) + '/')
+  : new URL('../', import.meta.url);
 export const DIST = new URL('dist/postcode-atlas/browser/', ROOT);
 
 export const PROFILES = {
@@ -21,12 +26,14 @@ export const PROFILES = {
 
 export const chromePath = () => process.env.CHROME_PATH || Launcher.getInstallations()[0];
 
-/** Serves dist/ with scripts/serve.mjs on a free port; resolves to { url, stop }. */
-export function startServer() {
-  if (!existsSync(new URL('index.html', DIST))) throw new Error('Geen build gevonden: draai eerst `npm run build`.');
+/** Serves dist/ of `root` (default ROOT) with scripts/serve.mjs on a free port; resolves to { url, stop }. */
+export function startServer(root = ROOT) {
+  const rootUrl = typeof root === 'string' ? pathToFileURL(resolve(root) + '/') : root;
+  const dist = new URL('dist/postcode-atlas/browser/', rootUrl);
+  if (!existsSync(new URL('index.html', dist))) throw new Error(`Geen build gevonden in ${dist.pathname}: draai eerst \`npm run build\`.`);
   const port = 4400 + Math.floor(Math.random() * 500);
   const proc = spawn(process.execPath, ['scripts/serve.mjs'], {
-    cwd: ROOT,
+    cwd: rootUrl,
     env: { ...process.env, PORT: String(port) },
     stdio: ['ignore', 'pipe', 'inherit'],
   });

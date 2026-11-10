@@ -1,47 +1,29 @@
 // Lighthouse scores and core metrics for a few states of the app, mobile and desktop.
 //
 //   npm run build:pages && npm run test:lighthouse [-- --assert]
-import { launch as launchChrome } from 'chrome-launcher';
-import lighthouse from 'lighthouse';
-import desktopConfig from 'lighthouse/core/config/desktop-config.js';
-import { chromePath, startServer } from './lib.mjs';
+import { startServer } from './lib.mjs';
+import { measure } from './lhr.mjs';
 
 const assert = process.argv.includes('--assert');
-const PAGES = ['/', '/?pc=35', '/?pc=3512AB'];
 // minimum scores (0-100); performance has some run-to-run noise
 const MIN = { performance: 90, accessibility: 100, 'best-practices': 100, seo: 100 };
 const MAX = { lcp: 2500, tbt: 200, cls: 0.05 };
 
 const server = await startServer();
-const chrome = await launchChrome({ chromePath: chromePath(), chromeFlags: ['--headless=new'] });
-const rows = [];
-let failed = false;
+let rows;
 try {
-  for (const form of ['mobile', 'desktop']) {
-    for (const path of PAGES) {
-      const r = await lighthouse(
-        server.url + path,
-        { port: chrome.port, output: 'json', logLevel: 'error', onlyCategories: Object.keys(MIN) },
-        form === 'desktop' ? desktopConfig : undefined,
-      );
-      const lhr = r.lhr;
-      const score = Object.fromEntries(Object.entries(lhr.categories).map(([k, c]) => [k, Math.round(c.score * 100)]));
-      const m = {
-        lcp: Math.round(lhr.audits['largest-contentful-paint'].numericValue),
-        tbt: Math.round(lhr.audits['total-blocking-time'].numericValue),
-        cls: +lhr.audits['cumulative-layout-shift'].numericValue.toFixed(3),
-      };
-      const bad = [
-        ...Object.entries(MIN).filter(([k, v]) => score[k] < v).map(([k]) => k),
-        ...Object.entries(MAX).filter(([k, v]) => m[k] > v).map(([k]) => k),
-      ];
-      failed ||= bad.length > 0;
-      rows.push({ form, path, ...score, ...m, bad });
-    }
-  }
+  rows = await measure(server.url);
 } finally {
-  await chrome.kill();
   server.stop();
+}
+
+let failed = false;
+for (const r of rows) {
+  r.bad = [
+    ...Object.entries(MIN).filter(([k, v]) => r[k] < v).map(([k]) => k),
+    ...Object.entries(MAX).filter(([k, v]) => r[k] > v).map(([k]) => k),
+  ];
+  failed ||= r.bad.length > 0;
 }
 
 console.log('\nform     pagina         perf  a11y    bp   seo   LCP ms  TBT ms    CLS');

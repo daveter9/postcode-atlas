@@ -17,7 +17,7 @@ Er werken meerdere sessies tegelijk aan dit project. Werk daarom **nooit** direc
 ## Na elke wijziging: committen, pushen en deployen
 - Commit en push elke afgeronde wijziging meteen naar `main` en deploy daarna naar postcoderadar.nl,
   zonder dat eerst te vragen. Uitzondering: tickets van het GitHub Projects-board gaan via een PR
-  (zie `.claude/board-loop.md` in de hoofdmap); die merge en deploy je niet zelf.
+  (skill `/ticket <n>`, zie `.claude/skills/ticket/SKILL.md`; refinen met `/refine <n>`); die merge en deploy je niet zelf.
 - Volgorde, vanuit je worktree:
   1. `git fetch origin && git rebase origin/main` (anderen kunnen intussen gepusht hebben)
   2. bouwen en testen (zie hieronder)

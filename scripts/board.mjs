@@ -5,12 +5,14 @@
 //            npm run board -- setup
 //
 // Gebruik:   npm run board -- list
-//            npm run board -- add "Titel" [--body "tekst"] [--label bug,ui] [--status Todo]
+//            npm run board -- add "Titel" [--body "tekst"] [--label bug,ui] [--status Backlog]
 //            npm run board -- move <issue#> "In Progress"
 //            npm run board -- edit <issue#> [--title "..."] [--body "..."] [--label x]
 //            npm run board -- close <issue#>        (gaat vanzelf naar Done)
 //            npm run board -- reopen <issue#>
 //            npm run board -- statuses
+//            npm run board -- todo [kolom]           (open tickets + comments als JSON, standaard Todo)
+//            npm run board -- comment <issue#> "tekst"
 //
 // Tickets zijn gewone GitHub Issues; het board is een GitHub Project (v2) waarvan
 // de kolommen de opties van het veld "Status" zijn. IDs worden elke keer op naam
@@ -23,10 +25,10 @@ const REPO = 'postcode-atlas';
 const PROJECT_TITLE = 'Postcode Atlas';
 const GH = process.env.GH_BIN || 'gh';
 
-function gh(args, { json = false } = {}) {
+function gh(args, { json = false, input } = {}) {
   let out;
   try {
-    out = execFileSync(GH, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    out = execFileSync(GH, args, { encoding: 'utf8', input, stdio: [input === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'] });
   } catch (e) {
     const msg = (e.stderr || e.message || '').toString().trim();
     throw new Error(msg || `gh ${args[0]} faalde`);
@@ -127,6 +129,40 @@ function setStatus(project, itemId, statusName) {
   return opt.name;
 }
 
+/** Alle open issues van deze repo op het board, met status, labels en comments, in één query. */
+function fetchTickets(project) {
+  const tickets = [];
+  let after = null;
+  do {
+    const d = graphql(
+      `query($p:ID!,$after:String){ node(id:$p){ ... on ProjectV2 { items(first:50, after:$after){
+         pageInfo{ hasNextPage endCursor }
+         nodes{
+           status: fieldValueByName(name:"Status"){ ... on ProjectV2ItemFieldSingleSelectValue { name } }
+           content{ ... on Issue { number title body url state repository{ nameWithOwner }
+             labels(first:20){ nodes{ name } }
+             comments(last:100){ nodes{ body createdAt author{ login } } } } } } } } } }`,
+      after ? { p: project.id, after } : { p: project.id },
+    );
+    const page = d.node.items;
+    for (const it of page.nodes) {
+      const c = it.content;
+      if (!c?.number || c.state !== 'OPEN' || c.repository.nameWithOwner !== `${OWNER}/${REPO}`) continue;
+      tickets.push({
+        number: c.number,
+        title: c.title,
+        url: c.url,
+        status: it.status?.name ?? null,
+        body: c.body,
+        labels: c.labels.nodes,
+        comments: c.comments.nodes,
+      });
+    }
+    after = page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null;
+  } while (after);
+  return tickets;
+}
+
 function issueNumber(arg) {
   const n = Number(String(arg ?? '').replace(/^#/, ''));
   if (!Number.isInteger(n) || n <= 0) throw new Error(`Geen geldig issuenummer: ${arg}`);
@@ -201,7 +237,7 @@ const commands = {
 
   add(pos, opt) {
     const title = pos[0];
-    if (!title) throw new Error('Gebruik: add "Titel" [--body ...] [--label a,b] [--status Todo]');
+    if (!title) throw new Error('Gebruik: add "Titel" [--body ...] [--label a,b] [--status Backlog]');
     const p = requireProject();
     const args = ['issue', 'create', '--repo', `${OWNER}/${REPO}`, '--title', title, '--body', opt.body || ''];
     if (opt.label) args.push('--label', opt.label);
@@ -210,7 +246,7 @@ const commands = {
     const number = issueNumber(url.split('/').pop());
     const issue = issueWithItems(number);
     const itemId = ensureItem(p, issue);
-    const status = setStatus(p, itemId, typeof opt.status === 'string' ? opt.status : 'Todo');
+    const status = setStatus(p, itemId, typeof opt.status === 'string' ? opt.status : 'Backlog');
     console.log(`#${number} "${title}" → ${status}\n${url}`);
   },
 
@@ -230,10 +266,25 @@ const commands = {
     const args = ['issue', 'edit', String(number), '--repo', `${OWNER}/${REPO}`];
     if (typeof opt.title === 'string') args.push('--title', opt.title);
     if (typeof opt.body === 'string') args.push('--body', opt.body);
+    if (typeof opt['body-file'] === 'string') args.push('--body-file', opt['body-file']);
     if (typeof opt.label === 'string') args.push('--add-label', opt.label);
     if (typeof opt['remove-label'] === 'string') args.push('--remove-label', opt['remove-label']);
     if (args.length === 5) throw new Error('Gebruik: edit <issue#> [--title ...] [--body ...] [--label a,b] [--remove-label c]');
     console.log(gh(args));
+  },
+
+  // Alle open tickets in een kolom (standaard Todo) met volledige tekst en comments, als JSON.
+  todo(pos) {
+    const p = requireProject();
+    const want = resolveOption(statusField(p.id), pos.join(' ') || 'Todo').name;
+    console.log(JSON.stringify(fetchTickets(p).filter((t) => t.status === want), null, 2));
+  },
+
+  comment(pos, opt) {
+    const number = issueNumber(pos[0]);
+    const body = typeof opt.body === 'string' ? opt.body : pos.slice(1).join(' ');
+    if (!body) throw new Error('Gebruik: comment <issue#> "tekst"  of  comment <issue#> --body "tekst"');
+    console.log(gh(['issue', 'comment', String(number), '--repo', `${OWNER}/${REPO}`, '--body', body]));
   },
 
   close(pos) {
