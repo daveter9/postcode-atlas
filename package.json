@@ -19,7 +19,8 @@
     "test:load": "node tests/load.mjs",
     "test:lighthouse": "node tests/lighthouse.mjs",
     "test:all": "npm run build:pages && node tests/e2e.mjs && node tests/load.mjs --assert && node tests/lighthouse.mjs --assert && node tests/frames.mjs",
-    "prepare": "git config core.hooksPath .githooks || true"
+    "board": "node scripts/board.mjs",
+    "prepare":"git config core.hooksPath .githooks || true"
   },
   "private": true,
   "packageManager": "npm@11.20.0",
