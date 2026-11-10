@@ -423,15 +423,28 @@ app-root {
   }
 }
 
-/* touchscreens: compact QWERTY keypad under the input bar (digits on top). Every key is a
-   tenth of the width; shorter rows are centred, the erase key is two keys wide. */
+/* touchscreens: compact keypad under the input bar. Letters: QWERTY, every key a tenth of the
+   width, shorter rows centred, the erase key two keys wide. Digits: two rows of five with the
+   erase key over the full height. Both are equally high, so the map does not jump. */
 .keypad {
   --kw: calc((100% - 9 * 4px) / 10);
   flex: none;
   display: flex;
   flex-direction: column;
   gap: 5px;
-  height: 168px;
+  height: 124px;
+}
+.keypad.digits {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr) 1.2fr;
+  grid-template-rows: repeat(2, 1fr);
+}
+.keypad.digits .krow {
+  display: contents;
+}
+.keypad.digits .del {
+  grid-column: 6;
+  grid-row: 1 / -1;
 }
 .krow {
   display: flex;
@@ -446,7 +459,7 @@ app-root {
   border: 1px solid var(--line);
   border-radius: 7px;
   background: var(--key);
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 600;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;

@@ -65,13 +65,12 @@ try {
       await wait(500);
       const tap = (k, sel = '.keypad button') => page.$$eval(sel, (bs, k) => bs.find((b) => b.textContent.trim() === k)?.click(), k);
       const keyState = (k) => page.$$eval('.keypad button', (bs, k) => bs.find((b) => b.textContent.trim() === k)?.disabled, k);
-      const rows = await page.$$eval('.krow', (rs) => rs.map((r) => r.textContent.replace(/s/g, '')));
-      check(profile, 'QWERTY-toetsenblok', rows.join('|') === '1234567890|QWERTYUIOP|ASDFGHJKL|ZXCVBNM⌫', rows.join('|'));
+      const rows = () => page.$$eval('.krow', (rs) => rs.map((r) => r.textContent.replace(/\s/g, '')).join('|'));
+      check(profile, 'eerst alleen cijfers', (await rows()) === '1234567890⌫', await rows());
       check(profile, '0 is uitgegrijsd als eerste cijfer', (await keyState('0')) === true);
-      check(profile, 'letters uitgegrijsd bij de cijfers', (await keyState('Q')) === true);
       for (const k of ['3', '5', '1', '2']) await tap(k);
       await page.waitForFunction(() => [...document.querySelectorAll('.keypad button')].some((b) => b.textContent.trim() === 'A' && !b.disabled), { timeout: 15000 }).catch(() => {});
-      check(profile, 'na vier cijfers letters aan, cijfers uit', (await keyState('A')) === false && (await keyState('1')) === true);
+      check(profile, 'na vier cijfers alleen QWERTY-letters', (await rows()) === 'QWERTYUIOP|ASDFGHJKL|ZXCVBNM⌫', await rows());
       await tap('A');
       await tap('B');
       check(profile, 'tikken op het toetsenblok', (await value()) === '3512 AB', await value());
@@ -83,7 +82,7 @@ try {
       await tap('⌫');
       check(profile, 'wissen op het toetsenblok', (await value()) === '3512', await value());
       const kp = await (await page.$('.keypad')).boundingBox();
-      check(profile, 'toetsenblok is compact', kp.height <= 175, String(kp.height));
+      check(profile, 'toetsenblok is compact', kp.height <= 130, String(kp.height));
       check(profile, 'geen lijst', !(await page.$('.kids')));
     } else {
       check(profile, 'geen toetsenblok of lijst', !(await page.$('.keypad')) && !(await page.$('.kids')));

@@ -114,10 +114,10 @@
 </div>
 
 @if (touch && !complete()) {
-  <!-- touchscreens: our own compact QWERTY keypad instead of the half-screen system keyboard;
+  <!-- touchscreens: our own compact keypad (digits, then QWERTY letters) instead of the half-screen system keyboard;
        it folds away once the postcode is complete, the erase key then sits in the bar -->
-  <div class="keypad" role="group" aria-label="Toetsenblok">
-    @for (row of keypad(); track $index; let last = $last) {
+  <div class="keypad" [class.digits]="!keypad().letters" role="group" aria-label="Toetsenblok">
+    @for (row of keypad().rows; track $index; let last = $last) {
       <div class="krow">
         @for (key of row; track key.k) {
           <button type="button" [disabled]="!key.ok" (mousedown)="$event.preventDefault()" (click)="press(key.k)">{{ key.k }}</button>

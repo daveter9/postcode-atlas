@@ -92,12 +92,13 @@ export class App {
     const c = this.code();
     return c.length === 6 || (c.length === 4 && this.pc6s().get(c) === null);
   });
-  /** QWERTY keypad rows: digits first, letters after four digits; keys that lead to no postcode are disabled */
+  /** keypad: digits only for the first four characters, then QWERTY letters only;
+      keys that lead to no postcode are disabled */
   protected readonly keypad = computed(() => {
     const c = this.code();
-    return ['1234567890', 'QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'].map((row, r) =>
-      [...row].map((k) => ({ k, ok: (r === 0 ? c.length < 4 : c.length >= 4 && c.length < 6) && this.isValid(c + k) })),
-    );
+    const letters = c.length >= 4;
+    const rows = letters ? ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'] : ['1234567890'];
+    return { letters, rows: rows.map((row) => [...row].map((k) => ({ k, ok: c.length < 6 && this.isValid(c + k) }))) };
   });
 
   protected readonly display = computed(() => formatCode(this.code()));
