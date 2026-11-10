@@ -52,6 +52,43 @@ function readTheme(): Theme {
   };
 }
 
+/**
+ * Phones: while the on-screen keyboard is open, fit the page into the space above it (class
+ * `kb` on <html>, height and offset of the visible area in --kb-h / --kb-top). Chrome on
+ * Android already resizes the layout (interactive-widget=resizes-content); iOS only shrinks
+ * the visual viewport, so the page follows that.
+ */
+function watchKeyboard(destroyRef: DestroyRef) {
+  const vv = window.visualViewport;
+  if (!vv || !matchMedia('(pointer: coarse)').matches) return;
+  const root = document.documentElement;
+  let full = 0;
+  let width = 0;
+  const update = () => {
+    if (innerWidth !== width) {
+      width = innerWidth; // rotated: measure the full height again
+      full = 0;
+    }
+    full = Math.max(full, innerHeight, vv.height);
+    const kb = vv.scale < 1.01 && full - vv.height > 150;
+    root.classList.toggle('kb', kb);
+    if (kb) {
+      root.style.setProperty('--kb-h', `${vv.height}px`);
+      root.style.setProperty('--kb-top', `${vv.offsetTop}px`);
+    } else {
+      root.style.removeProperty('--kb-h');
+      root.style.removeProperty('--kb-top');
+    }
+  };
+  vv.addEventListener('resize', update);
+  vv.addEventListener('scroll', update);
+  destroyRef.onDestroy(() => {
+    vv.removeEventListener('resize', update);
+    vv.removeEventListener('scroll', update);
+  });
+  update();
+}
+
 @Component({
   selector: 'app-root',
   templateUrl: './app.html',
@@ -183,6 +220,7 @@ export class App {
     });
 
     afterNextRender(() => {
+      watchKeyboard(destroyRef);
       this.inputRef().nativeElement.focus({ preventScroll: true });
       void this.start(destroyRef);
     });
@@ -351,7 +389,11 @@ export class App {
       this.setCode('');
       return;
     }
-    if (e.target === input) return; // the field handles its own typing
+    if (e.target === input) {
+      // "Gereed" on a phone keyboard: close the keyboard so the whole map is visible again
+      if (e.key === 'Enter' && matchMedia('(pointer: coarse)').matches) input.blur();
+      return; // the field handles its own typing
+    }
     const t = e.target as HTMLElement;
     if (/^[0-9a-zA-Z]$/.test(e.key) || e.key === 'Backspace') {
       if (t.tagName === 'BUTTON' && (e.key === ' ' || e.key === 'Enter')) return;

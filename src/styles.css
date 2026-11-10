@@ -384,6 +384,23 @@ app-root {
   .title {
     font-size: 1.15rem;
   }
+  .sources {
+    padding: 4px 0 6px;
+    font-size: 0.625rem;
+    line-height: 1.35;
+  }
+}
+
+/* phone keyboard open: only map and input bar, in the space above the keyboard */
+.kb .wrap {
+  height: var(--kb-h, 100dvh);
+  min-height: 0;
+  translate: 0 var(--kb-top, 0);
+  padding-bottom: 6px;
+}
+.kb header.site,
+.kb .sources {
+  display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
